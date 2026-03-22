@@ -2,6 +2,8 @@
 
 A collection of AI experiments and demos.
 
+> **Disclaimer:** This repository is extensively — if not entirely — AI assisted.
+
 ## Contents
 
 | Directory | Description |
