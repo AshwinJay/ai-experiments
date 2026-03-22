@@ -157,11 +157,10 @@ curl -X POST http://localhost:8080/ClaimProcessor/claim-001/processClaim \
 # 7. Test crash recovery: submit, wait for logs to show step-3, kill, restart
 ```
 
-## API Notes (SDK 2.4.1 / langchain4j 1.0.0)
+## API Notes (SDK 2.4.1 / langchain4j 1.12.2)
 
 - **`ctx.run` serde:** Use `String.class` directly — `ctx.run("name", String.class, () -> ...)`. `CoreSerdes` does not exist in 2.4.1.
 - **`ctx.awakeable`:** Same — `ctx.awakeable(String.class)`.
 - **Endpoint builder:** `RestateHttpEndpointBuilder` is deprecated. Use `RestateHttpServer.listen(Endpoint.bind(service), port)`.
 - **AiServices:** `.chatModel(model)` — the old `.chatLanguageModel()` was renamed in 1.0.0.
-- **langchain4j version:** 1.0.0 (1.1.0 not yet on Maven Central as of March 2026).
-- **Claude provider:** Uses Anthropic's OpenAI-compatible endpoint (`https://api.anthropic.com/v1/`) via `OpenAiChatModel` — no `langchain4j-anthropic` dependency needed. `langchain4j-anthropic:0.36.2` implements the old `ChatLanguageModel` interface and is incompatible with langchain4j 1.0.0's `AiServices.chatModel()`.
+- **Claude provider:** Uses `langchain4j-anthropic` 1.12.2 with `AnthropicChatModel` directly — no OpenAI-compat workaround needed.
