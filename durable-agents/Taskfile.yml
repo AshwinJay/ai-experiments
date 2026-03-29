@@ -1,0 +1,58 @@
+version: '3'
+
+tasks:
+  build:
+    desc: Compile and package fat JAR (skips tests)
+    cmds:
+      - mvn package -DskipTests
+
+  test:
+    desc: Run unit tests
+    cmds:
+      - mvn test
+
+  test:it:
+    desc: Run integration tests (starts/stops container runtime automatically)
+    env:
+      DOCKER_HOST: "unix://{{.HOME}}/.colima/default/docker.sock"
+    cmds:
+      - task: runtime:start
+      - mvn verify -Dsurefire.skip=true
+      - task: runtime:stop
+
+  test:all:
+    desc: Run unit and integration tests (starts/stops container runtime automatically)
+    env:
+      DOCKER_HOST: "unix://{{.HOME}}/.colima/default/docker.sock"
+    cmds:
+      - task: runtime:start
+      - mvn verify
+      - task: runtime:stop
+
+  runtime:start:
+    desc: Start the container runtime
+    cmds:
+      - colima start
+
+  runtime:stop:
+    desc: Stop the container runtime
+    cmds:
+      - colima stop
+
+  up:
+    desc: Start Restate server (container runtime must be running)
+    cmds:
+      - docker compose up -d restate
+
+  register:
+    desc: Register the local app service with Restate (run after 'task up' + starting the app)
+    cmds:
+      - >-
+        curl -sf http://localhost:9070/deployments
+        -H 'content-type: application/json'
+        -d '{"uri":"http://host.docker.internal:9080/"}'
+
+  down:
+    desc: Stop all Docker services
+    cmds:
+      - docker compose down
