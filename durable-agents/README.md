@@ -83,7 +83,7 @@ src/main/java/ai/durableagents/
 │   ├── ClaimRequest.java                 # Input record
 │   └── ClaimDecision.java                # Output record (decision, riskLevel, fraudFlag)
 ├── agents/
-│   ├── AgentFactory.java                 # Builds langchain4j AI Services; selects provider via LLM_PROVIDER
+│   ├── AgentFactory.java                 # Builds langchain4j AI Services; selects provider via LLM_PROVIDER; accepts ChatModel for test injection
 │   ├── TriageAgent.java                  # Classifies claim category + severity
 │   ├── RiskAssessmentAgent.java          # Evaluates risk level and score
 │   ├── FraudAnalysisAgent.java           # Detects fraud indicators
@@ -97,28 +97,43 @@ src/main/java/ai/durableagents/
 │   ├── CompositePlanner.java
 │   └── DurableWorkflowEngine.java        # ctx.run("step-N-agentName") per agent invocation
 └── restate/
-    └── ClaimProcessor.java               # @VirtualObject: 3-stage pipeline + awakeable
+    └── ClaimProcessor.java               # @VirtualObject: 3-stage pipeline + awakeable; AgentFactory injected via constructor
+
+src/test/java/ai/durableagents/
+├── planner/                              # Unit tests (Surefire)
+└── integration/
+    └── HappyPathIT.java                  # Integration test: low-value claim auto-approves (Failsafe + testcontainers)
 ```
 
 ## Build & Test
 
 ```bash
-mvn clean package -DskipTests       # build fat JAR
-mvn test                            # run all tests
-mvn test -Dtest=SequentialPlannerTest                  # single test class
-mvn test -Dtest=LoopPlannerTest#testExitCondition      # single test method
+# Unit tests only
+mvn test
+task test
+
+# Integration tests (starts/stops Colima automatically)
+task test:it
+
+# Unit + integration tests
+task test:all
+
+# Single test class / method
+mvn test -Dtest=SequentialPlannerTest
+mvn test -Dtest=LoopPlannerTest#testExitCondition
 ```
+
+Integration tests use `RestateRunner` (testcontainers) and a stub `ChatModel` — no LLM API key needed.
 
 ## Running
 
 ```bash
-# 1. Start Restate
-docker run --rm -p 8080:8080 -p 9070:9070 -p 9071:9071 \
-  --add-host=host.docker.internal:host-gateway \
-  docker.restate.dev/restatedev/restate:latest
+# 1. Start container runtime + Restate
+task runtime:start
+task up
 
 # 2. Build
-mvn clean package -DskipTests
+task build
 
 # 3. Run — choose provider via LLM_PROVIDER
 
@@ -133,9 +148,7 @@ export ANTHROPIC_API_KEY="sk-ant-..."
 java -jar target/durable-agents-1.0-SNAPSHOT.jar
 
 # 4. Register with Restate
-curl http://localhost:9070/deployments \
-  -H 'content-type: application/json' \
-  -d '{"uri": "http://host.docker.internal:9080/"}'
+task register
 
 # 5. Increase inactivity timeout for LLM calls
 curl -X PATCH http://localhost:9070/services/ClaimProcessor \
@@ -155,6 +168,10 @@ curl -X POST http://localhost:8080/ClaimProcessor/claim-001/processClaim \
   }'
 
 # 7. Test crash recovery: submit, wait for logs to show step-3, kill, restart
+
+# 8. Tear down
+task down
+task runtime:stop
 ```
 
 ## API Notes (SDK 2.4.1 / langchain4j 1.12.2)

@@ -22,11 +22,19 @@ public class ClaimProcessor {
     private static final double QUALITY_THRESHOLD = 0.8;
     private static final int MAX_REVIEW_ITERATIONS = 5;
 
+    private final AgentFactory factory;
+
+    public ClaimProcessor() {
+        this.factory = new AgentFactory();
+    }
+
+    public ClaimProcessor(AgentFactory factory) {
+        this.factory = factory;
+    }
+
     @Handler
     public ClaimDecision processClaim(ObjectContext ctx, ClaimRequest req) {
         log.info("Processing claim {} for customer {}", req.claimId(), req.customerId());
-
-        AgentFactory factory = new AgentFactory();
 
         // --- Build agent registry ---
         Map<String, Function<AgenticScope, String>> agents = Map.of(

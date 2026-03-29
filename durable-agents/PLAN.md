@@ -29,10 +29,9 @@ Each agent as its own Restate `@Service`. Orchestrator Virtual Object calls them
 
 ### Immediate
 
-1. **docker-compose.yml** — start Restate Server + the Java service together with auto-registration. Removes the manual curl registration step.
+1. ~~**docker-compose.yml**~~ — done. Single `restate` service for local dev; `Dockerfile` added for fully-containerized runs; `Taskfile.yml` wraps build/test/up/down/register with Colima lifecycle management.
 
-3. **Integration tests** — use Restate's test utilities (`RestateRunner` / testcontainers):
-   - Happy path: low-value claim auto-approves through all agents
+2. **Integration tests** — `HappyPathIT` done (low-value claim auto-approves via stub `ChatModel`). Remaining:
    - Human review: high-value claim suspends, resolves on awakeable
    - Crash recovery: kill mid-workflow, restart, verify replay skips completed agents
 

@@ -60,6 +60,26 @@
       <version>5.10.2</version>
       <scope>test</scope>
     </dependency>
+
+    <!-- Integration testing -->
+    <dependency>
+      <groupId>dev.restate</groupId>
+      <artifactId>sdk-testing</artifactId>
+      <version>${restate.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.testcontainers</groupId>
+      <artifactId>testcontainers</artifactId>
+      <version>1.19.8</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.testcontainers</groupId>
+      <artifactId>junit-jupiter</artifactId>
+      <version>1.19.8</version>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
 
   <build>
@@ -80,11 +100,26 @@
         </configuration>
       </plugin>
 
-      <!-- Surefire: run JUnit 5 -->
+      <!-- Surefire: run JUnit 5 unit tests -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
         <version>3.2.5</version>
+      </plugin>
+
+      <!-- Failsafe: run integration tests (*IT.java) -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-failsafe-plugin</artifactId>
+        <version>3.2.5</version>
+        <executions>
+          <execution>
+            <goals>
+              <goal>integration-test</goal>
+              <goal>verify</goal>
+            </goals>
+          </execution>
+        </executions>
       </plugin>
 
       <!-- Fat jar -->

@@ -19,6 +19,10 @@ public class AgentFactory {
 
     private final ChatModel model;
 
+    public AgentFactory(ChatModel model) {
+        this.model = model;
+    }
+
     public AgentFactory() {
         String provider = System.getenv().getOrDefault("LLM_PROVIDER", "openai").toLowerCase();
         this.model = switch (provider) {
