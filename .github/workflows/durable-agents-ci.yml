@@ -1,13 +1,21 @@
-name: CI
+name: durable-agents CI
 
 on:
   push:
     branches: [main]
+    paths:
+      - 'durable-agents/**'
   pull_request:
+    paths:
+      - 'durable-agents/**'
 
 jobs:
   test:
     runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: durable-agents
 
     steps:
       - uses: actions/checkout@v4
