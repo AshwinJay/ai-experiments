@@ -125,6 +125,10 @@ mvn test -Dtest=LoopPlannerTest#testExitCondition
 
 Integration tests use `RestateRunner` (testcontainers) and a stub `ChatModel` — no LLM API key needed.
 
+### CI (GitHub Actions)
+
+The workflow at `.github/workflows/ci.yml` runs on every push to `main` and on every PR. It runs `mvn verify` on `ubuntu-latest`, which executes both unit tests (Surefire) and integration tests (Failsafe). Docker is pre-installed on GitHub Actions runners, so no local Docker or Colima is required to run integration tests in CI.
+
 ## Running
 
 ```bash

@@ -31,7 +31,9 @@ Each agent as its own Restate `@Service`. Orchestrator Virtual Object calls them
 
 1. ~~**docker-compose.yml**~~ — done. Single `restate` service for local dev; `Dockerfile` added for fully-containerized runs; `Taskfile.yml` wraps build/test/up/down/register with Colima lifecycle management.
 
-2. **Integration tests** — `HappyPathIT` done (low-value claim auto-approves via stub `ChatModel`). Remaining:
+2. ~~**GitHub Actions CI**~~ — done. `.github/workflows/ci.yml` runs `mvn verify` on `ubuntu-latest` (Docker pre-installed); integration tests run in CI without local Docker or Colima.
+
+3. **Integration tests** — `HappyPathIT` done (low-value claim auto-approves via stub `ChatModel`). Remaining:
    - Human review: high-value claim suspends, resolves on awakeable
    - Crash recovery: kill mid-workflow, restart, verify replay skips completed agents
 
