@@ -1,0 +1,42 @@
+version: '3'
+
+tasks:
+  default:
+    desc: List all available tasks
+    silent: true
+    cmds:
+      - task --list
+
+  build:
+    desc: Compile all 7 modules
+    cmds:
+      - mvn compile
+
+  test:
+    desc: Run all ~95 test cases across all modules
+    cmds:
+      - mvn test
+
+  clean:
+    desc: Remove all build output
+    cmds:
+      - mvn clean
+
+  verify:
+    desc: Clean, compile, and run all tests
+    cmds:
+      - mvn clean verify
+
+  run:
+    desc: Dry-run the CLI against the bundled sample project
+    cmds:
+      - mvn -pl dbt-cli exec:java
+          -Dexec.mainClass="com.dbtespresso.cli.Main"
+          -Dexec.args="dbt-parser/src/test/resources/sample_project"
+
+  run-custom:
+    desc: Dry-run the CLI against a custom dbt project (task run-custom -- path/to/project)
+    cmds:
+      - mvn -pl dbt-cli exec:java
+          -Dexec.mainClass="com.dbtespresso.cli.Main"
+          -Dexec.args="{{.CLI_ARGS}}"
