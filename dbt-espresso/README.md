@@ -8,19 +8,32 @@ Inspired by [dbt-fusion](https://github.com/dbt-labs/dbt-fusion) (Rust), reimagi
 
 - Java 21+
 - Maven 3.9+
+- [Task](https://taskfile.dev) (`brew install go-task`)
 
-## Build & Test
-
-```bash
-mvn clean compile   # compile all 7 modules
-mvn test            # run all ~80 test cases
-```
-
-## Run (dry-run against sample project)
+## Quick start
 
 ```bash
-mvn -pl dbt-cli exec:java -Dexec.mainClass="Main" -Dexec.args="path/to/your/dbt/project"
+task build        # compile all 7 modules
+task test         # run all ~95 test cases
+task verify       # clean + compile + test
+task run          # dry-run CLI against the bundled sample project
+task run-custom -- path/to/your/dbt/project
 ```
+
+Run `task` (no arguments) to list all targets.
+
+<details>
+<summary>Bare Maven equivalents</summary>
+
+```bash
+mvn compile
+mvn test
+mvn clean verify
+mvn -pl dbt-cli exec:java -Dexec.mainClass="com.dbtespresso.cli.Main" \
+    -Dexec.args="dbt-parser/src/test/resources/sample_project"
+```
+
+</details>
 
 ## Architecture
 
@@ -30,10 +43,13 @@ mvn -pl dbt-cli exec:java -Dexec.mainClass="Main" -Dexec.args="path/to/your/dbt/
 dbt-espresso/
 ├── pom.xml                          # Parent POM (Java 21, JUnit 5, AssertJ, JSQLParser)
 │
-├── dbt-jinja/                       # ZERO external deps
+├── dbt-jinja/                       # Depends on: Jinjava 2.7.2
 │   ├── Dependency.java              # Sealed interface: ModelRef, SourceRef, MetricRef
 │   ├── RefExtractor.java            # Static Jinja analysis — extracts ref()/source() via regex
-│   └── RefExtractorTest.java        # 15 tests: quotes, dedup, comments, filters, incremental
+│   ├── RenderContext.java           # Record: ref/source resolution maps, vars, isIncremental
+│   ├── JinjaRenderer.java           # Renders raw Jinja+SQL → plain SQL (pre-process + Jinjava)
+│   ├── RefExtractorTest.java        # 15 tests: quotes, dedup, comments, filters, incremental
+│   └── JinjaRendererTest.java       # 15 tests: ref/source/config/var/is_incremental/full models
 │
 ├── dbt-parser/                      # Depends on: dbt-jinja
 │   ├── ParsedModel.java             # Record: name, resourceType, filePath, rawSql, deps, config
@@ -84,7 +100,7 @@ dbt-espresso/
 ### Module Dependency Graph
 
 ```
-dbt-jinja  (no deps — pure Java regex/records)
+dbt-jinja  (Jinjava 2.7.2 — static analysis + Jinja rendering)
     │
     ├──→ dbt-parser  (walks filesystem, produces ParsedModel)
     │        │
@@ -102,8 +118,8 @@ dbt-jinja  (no deps — pure Java regex/records)
 ## The Pipeline
 
 ```
-.sql files → RefExtractor → ParsedModel → ModelGraph → GraphExecutor → Results
-               (Jinja)       (scanner)      (DAG)     (virtual threads)
+.sql files → RefExtractor → ParsedModel → ModelGraph → JinjaRenderer → GraphExecutor → Results
+               (static)       (scanner)      (DAG)       (rendering)    (virtual threads)
 ```
 
 1. **RefExtractor** statically analyzes `{{ ref('x') }}` / `{{ source('a','b') }}` calls
@@ -115,17 +131,23 @@ dbt-jinja  (no deps — pure Java regex/records)
 3. **ModelGraph** wires edges from `ref()` targets, detects cycles (DFS), computes execution
    levels (Kahn's algorithm). Supports `select(names, upstream, downstream)` for `--select`.
 
-4. **GraphExecutor** runs level-by-level on Java 21 virtual threads. If a model fails, all
+4. **JinjaRenderer** resolves dbt function calls (`ref`, `source`, `config`, `var`,
+   `is_incremental`) via a regex pre-processing pass, then delegates remaining Jinja2 constructs
+   (`{% if %}`, `{% for %}`, `{% set %}`, filters) to Jinjava. Takes a `RenderContext` with
+   per-run resolution maps and variable bindings.
+
+5. **GraphExecutor** runs level-by-level on Java 21 virtual threads. If a model fails, all
    downstream dependents are automatically skipped. Concurrency is controllable via semaphore.
 
-5. **SqlAnalyzer** (JSQLParser) validates rendered SQL post-Jinja and extracts physical table
+6. **SqlAnalyzer** (JSQLParser) validates rendered SQL post-Jinja and extracts physical table
    names for lineage tracking. JSQLParser supports Snowflake, BigQuery, Redshift, Databricks,
    Postgres, MySQL, and more from a single grammar.
 
 ## What Works
 
-- **Compiles:** All modules compile on Java 21. Only `dbt-sql` needs Maven for JSQLParser.
+- **Compiles:** All modules compile on Java 21. `dbt-jinja` uses Jinjava; `dbt-sql` uses JSQLParser.
 - **Static ref extraction:** `RefExtractor` finds `ref()`, `source()`, `metric()` in Jinja SQL without rendering.
+- **Jinja rendering:** `JinjaRenderer` resolves dbt functions (`ref`, `source`, `config`, `var`, `is_incremental`) and renders full Jinja2 templates (conditionals, loops, set) to plain SQL.
 - **Project scanning:** `DbtProjectScanner` walks `models/` and produces `ParsedModel` records with deps + config.
 - **DAG construction:** `ModelGraph` builds the graph, detects cycles, computes execution levels, supports `--select +model` and `model+` ancestor/descendant selection.
 - **Parallel execution:** `GraphExecutor` runs models level-by-level on virtual threads with optional concurrency limits. Failed models skip all downstream dependents.
@@ -145,6 +167,7 @@ dbt-jinja  (no deps — pure Java regex/records)
 | **Sealed interfaces** | `Dependency` is sealed → exhaustive pattern matching in `switch` |
 | **Records everywhere** | Immutable data carriers for `ParsedModel`, `ModelResult`, `ExecutionSummary` |
 | **Static ref extraction** | Regex-based extraction runs before Jinja rendering to break the chicken-and-egg DAG problem; `depends_on` YAML override handles edge cases |
+| **Two-phase Jinja rendering** | dbt functions (ref, source, config, var, is_incremental) resolved via regex pre-processing; standard Jinja2 constructs delegated to Jinjava — avoids needing a custom EL function registry |
 | **Generic test native compilation** | 8 most common `dbt_expectations` tests compiled directly to SQL for speed; others fall through to Jinja macro resolution |
 
 ## Testing Ecosystem Compatibility
@@ -160,7 +183,7 @@ dbt-jinja  (no deps — pure Java regex/records)
 
 Priority order for making this a usable dbt runner:
 
-1. **Jinja rendering engine** — Add [Jinjava](https://github.com/HubSpot/jinjava) to `dbt-jinja/pom.xml`; implement custom `ref()`, `source()`, `config()`, `var()`, `is_incremental()` functions; renderer takes a `ParsedModel` + resolved graph and outputs plain SQL.
+1. ~~**Jinja rendering engine**~~ ✅ — `JinjaRenderer` + `RenderContext` in `dbt-jinja`; resolves `ref()`, `source()`, `config()`, `var()`, `is_incremental()`; delegates remaining Jinja2 to Jinjava.
 
 2. **YAML schema parsing** — Parse `schema.yml` / `dbt_project.yml` / `profiles.yml` with Jackson (`jackson-dataformat-yaml`); map to `UnitTestDefinition`, `GenericTest`, and config records.
 
@@ -168,8 +191,12 @@ Priority order for making this a usable dbt runner:
 
 4. **Picocli CLI** — Replace `Main.java` with proper subcommands (`parse`, `build`, `run`, `test`, `ls`, `compile`) and flags (`--select`, `--exclude`, `--threads`, `--target`, `--profiles-dir`).
 
-5. **Incremental model support** — `is_incremental()`, merge statements.
+5. **Incremental model support** — Wire `is_incremental()` to a real run-state check; implement merge/insert-overwrite strategies.
 
 6. **LSP server** — LSP4J for VS Code / Cursor integration.
 
 7. **GraalVM native image** — Single-binary distribution (no JVM needed at runtime).
+
+8. ~~**Taskfile**~~ ✅ — `Taskfile.yml` with `build`, `test`, `verify`, `clean`, `run`, `run-custom`.
+
+9. **Integration tests against real databases** — Implement `AdapterContract` for Postgres, MySQL, and SQLite; spin up each engine in a Docker container (Testcontainers); run `AdapterComplianceSuite` against all three to verify SQL dialect handling, DDL execution, and query results end-to-end.
