@@ -2,9 +2,11 @@ package com.dbtespresso.testing;
 
 import com.dbtespresso.parser.ParsedModel;
 import com.dbtespresso.parser.ParsedModel.ResourceType;
+import com.dbtespresso.testing.SchemaFile.*;
 import com.dbtespresso.testing.UnitTestDefinition.*;
 import org.junit.jupiter.api.*;
 
+import java.io.InputStream;
 import java.nio.file.Path;
 import java.util.*;
 
@@ -297,6 +299,166 @@ class TestingModuleTest {
             var violations = MetaTestingValidator.validateDocCoverage(
                     models, documented, actual, requiring);
             assertThat(violations).isEmpty();
+        }
+    }
+
+    // ==================== SchemaFileParser ====================
+
+    @Nested class SchemaFileParserTest {
+
+        SchemaFile schema;
+
+        @BeforeEach
+        void load() throws Exception {
+            try (InputStream in = getClass().getResourceAsStream("/sample_schema.yml")) {
+                schema = SchemaFileParser.parse(in);
+            }
+        }
+
+        @Test void parsesTwoModels() {
+            assertThat(schema.models()).hasSize(2);
+        }
+
+        @Test void parsesModelName() {
+            assertThat(schema.models().getFirst().name()).isEqualTo("orders");
+        }
+
+        @Test void parsesModelDescription() {
+            assertThat(schema.models().getFirst().description())
+                    .contains("Order fact table");
+        }
+
+        @Test void parsesModelConfig() {
+            assertThat(schema.models().getFirst().config())
+                    .containsEntry("materialized", "table");
+        }
+
+        @Test void parsesFourColumns() {
+            assertThat(schema.models().getFirst().columns()).hasSize(4);
+        }
+
+        @Test void parsesSimpleColumnTests() {
+            ColumnSchema orderIdCol = schema.models().getFirst().columns().getFirst();
+            assertThat(orderIdCol.name()).isEqualTo("order_id");
+            assertThat(orderIdCol.tests()).hasSize(2);
+            assertThat(orderIdCol.tests().stream().map(GenericTest::testName))
+                    .containsExactlyInAnyOrder("unique", "not_null");
+        }
+
+        @Test void parsesAcceptedValuesWithArgs() {
+            ColumnSchema statusCol = schema.models().getFirst().columns().get(1);
+            assertThat(statusCol.name()).isEqualTo("status");
+            GenericTest test = statusCol.tests().getFirst();
+            assertThat(test.testName()).isEqualTo("accepted_values");
+            assertThat(test.isBuiltin()).isTrue();
+            @SuppressWarnings("unchecked")
+            List<String> values = (List<String>) test.arguments().get("values");
+            assertThat(values).containsExactly("placed", "shipped", "completed", "returned");
+        }
+
+        @Test void parsesRelationshipsTest() {
+            ColumnSchema customerIdCol = schema.models().getFirst().columns().get(2);
+            GenericTest relTest = customerIdCol.tests().stream()
+                    .filter(t -> t.testName().equals("relationships")).findFirst().orElseThrow();
+            assertThat(relTest.arguments()).containsKey("to");
+            assertThat(relTest.arguments()).containsEntry("field", "customer_id");
+        }
+
+        @Test void parsesExpectationTest() {
+            ColumnSchema amountCol = schema.models().getFirst().columns().get(3);
+            GenericTest expectTest = amountCol.tests().stream()
+                    .filter(GenericTest::isExpectation).findFirst().orElseThrow();
+            assertThat(expectTest.testName()).isEqualTo("expect_column_values_to_be_between");
+            assertThat(expectTest.packageName()).isEqualTo("dbt_expectations");
+            assertThat(expectTest.arguments()).containsEntry("min_value", 0);
+            assertThat(expectTest.arguments()).containsEntry("max_value", 100000);
+        }
+
+        @Test void parsesModelLevelTest() {
+            List<GenericTest> modelTests = schema.models().getFirst().modelTests();
+            assertThat(modelTests).hasSize(1);
+            assertThat(modelTests.getFirst().testName())
+                    .isEqualTo("expect_table_row_count_to_be_between");
+        }
+
+        @Test void parsesSeverityOverride() {
+            ModelSchema stgOrders = schema.models().get(1);
+            ColumnSchema statusCol = stgOrders.columns().get(1);
+            GenericTest avTest = statusCol.tests().getFirst();
+            assertThat(avTest.severity()).isEqualTo(GenericTest.TestSeverity.WARN);
+        }
+
+        @Test void parsesSource() {
+            assertThat(schema.sources()).hasSize(1);
+            assertThat(schema.sources().getFirst().name()).isEqualTo("jaffle_shop");
+        }
+
+        @Test void parsesSourceTable() {
+            SourceTableSchema table = schema.sources().getFirst().tables().getFirst();
+            assertThat(table.tableName()).isEqualTo("orders");
+            assertThat(table.sourceName()).isEqualTo("jaffle_shop");
+        }
+
+        @Test void parsesSourceColumnTests() {
+            SourceTableSchema table = schema.sources().getFirst().tables().getFirst();
+            ColumnSchema idCol = table.columns().getFirst();
+            assertThat(idCol.name()).isEqualTo("id");
+            assertThat(idCol.tests()).hasSize(2);
+        }
+
+        @Test void parsesTwoUnitTests() {
+            assertThat(schema.unitTests()).hasSize(2);
+        }
+
+        @Test void parsesUnitTestName() {
+            assertThat(schema.unitTests().getFirst().name()).isEqualTo("test_orders_joins_correctly");
+            assertThat(schema.unitTests().getFirst().modelName()).isEqualTo("orders");
+        }
+
+        @Test void parsesUnitTestGivenInputs() {
+            UnitTestDefinition ut = schema.unitTests().getFirst();
+            assertThat(ut.given()).hasSize(3);
+        }
+
+        @Test void parsesCsvFormatFromExplicitTag() {
+            MockInput csvInput = schema.unitTests().getFirst().given().getFirst();
+            assertThat(csvInput.input()).isEqualTo("ref('stg_orders')");
+            assertThat(csvInput.format()).isEqualTo(MockInput.InputFormat.CSV);
+            assertThat(csvInput.rows()).contains("order_id,customer_id");
+        }
+
+        @Test void infersDictFormatFromListRows() {
+            MockInput dictInput = schema.unitTests().getFirst().given().get(1);
+            assertThat(dictInput.input()).isEqualTo("ref('stg_customers')");
+            assertThat(dictInput.format()).isEqualTo(MockInput.InputFormat.DICT);
+            assertThat(dictInput.rows()).contains("customer_id");
+        }
+
+        @Test void parsesExpectedOutput() {
+            UnitTestDefinition ut = schema.unitTests().getFirst();
+            assertThat(ut.expected()).isNotNull();
+            assertThat(ut.expected().rows()).contains("order_id");
+        }
+
+        @Test void genericTestsFlattenAll() {
+            List<GenericTest> all = schema.genericTests();
+            // orders: 2+1+2+2(amount)+1(model) = 8; stg_orders: 2+1 = 3; source: 2+1 = 3  →  14
+            assertThat(all).hasSizeGreaterThanOrEqualTo(10);
+        }
+
+        @Test void parsesFromYamlString() throws Exception {
+            String yaml = """
+                    version: 2
+                    models:
+                      - name: my_model
+                        columns:
+                          - name: id
+                            data_tests:
+                              - not_null
+                    """;
+            SchemaFile sf = SchemaFileParser.parseString(yaml);
+            assertThat(sf.models()).hasSize(1);
+            assertThat(sf.models().getFirst().columns().getFirst().tests()).hasSize(1);
         }
     }
 

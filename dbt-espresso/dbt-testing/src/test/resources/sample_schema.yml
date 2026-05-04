@@ -1,0 +1,111 @@
+version: 2
+
+models:
+  - name: orders
+    description: "Order fact table joining staging models"
+    config:
+      materialized: table
+    columns:
+      - name: order_id
+        description: "Primary key"
+        data_tests:
+          - unique
+          - not_null
+      - name: status
+        description: "Order lifecycle status"
+        data_tests:
+          - accepted_values:
+              values:
+                - placed
+                - shipped
+                - completed
+                - returned
+      - name: customer_id
+        data_tests:
+          - not_null
+          - relationships:
+              to: ref('stg_customers')
+              field: customer_id
+      - name: amount
+        data_tests:
+          - not_null
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
+              max_value: 100000
+    data_tests:
+      - dbt_expectations.expect_table_row_count_to_be_between:
+          min_value: 0
+
+  - name: stg_orders
+    description: "Staged orders from the raw source"
+    columns:
+      - name: order_id
+        data_tests:
+          - unique
+          - not_null
+      - name: status
+        data_tests:
+          - accepted_values:
+              values: [placed, shipped, completed, returned]
+              severity: warn
+
+sources:
+  - name: jaffle_shop
+    description: "Raw operational database"
+    tables:
+      - name: orders
+        description: "Raw orders table"
+        columns:
+          - name: id
+            data_tests:
+              - not_null
+              - unique
+          - name: status
+            data_tests:
+              - not_null
+
+unit_tests:
+  - name: test_orders_joins_correctly
+    model: orders
+    given:
+      - input: ref('stg_orders')
+        format: csv
+        rows: |
+          order_id,customer_id,status,order_date
+          1,100,placed,2023-01-01
+          2,101,shipped,2023-01-02
+      - input: ref('stg_customers')
+        rows:
+          - {customer_id: 100, first_name: Alice, last_name: Smith}
+          - {customer_id: 101, first_name: Bob, last_name: Jones}
+      - input: ref('stg_payments')
+        format: csv
+        rows: |
+          order_id,amount
+          1,50.00
+          2,75.00
+    expect:
+      rows:
+        - {order_id: 1, customer_id: 100, status: placed}
+        - {order_id: 2, customer_id: 101, status: shipped}
+
+  - name: test_orders_with_no_payments
+    model: orders
+    given:
+      - input: ref('stg_orders')
+        format: csv
+        rows: |
+          order_id,customer_id,status
+          3,102,placed
+      - input: ref('stg_customers')
+        format: csv
+        rows: |
+          customer_id,first_name,last_name
+          102,Carol,White
+      - input: ref('stg_payments')
+        format: csv
+        rows: |
+          order_id,amount
+    expect:
+      rows:
+        - {order_id: 3, amount: 0}

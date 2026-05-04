@@ -14,7 +14,7 @@ Inspired by [dbt-fusion](https://github.com/dbt-labs/dbt-fusion) (Rust), reimagi
 
 ```bash
 task build        # compile all 7 modules
-task test         # run all ~95 test cases
+task test         # run all ~133 test cases
 task verify       # clean + compile + test
 task run          # dry-run CLI against the bundled sample project
 task run-custom -- path/to/your/dbt/project
@@ -51,12 +51,18 @@ dbt-espresso/
 │   ├── RefExtractorTest.java        # 15 tests: quotes, dedup, comments, filters, incremental
 │   └── JinjaRendererTest.java       # 15 tests: ref/source/config/var/is_incremental/full models
 │
-├── dbt-parser/                      # Depends on: dbt-jinja
+├── dbt-parser/                      # Depends on: dbt-jinja, jackson-dataformat-yaml
 │   ├── ParsedModel.java             # Record: name, resourceType, filePath, rawSql, deps, config
 │   ├── ConfigExtractor.java         # Pulls config(materialized='table', ...) from Jinja
 │   ├── DbtProjectScanner.java       # Walks models/ dir, produces ParsedModel list
+│   ├── ProjectConfig.java           # Record: parsed dbt_project.yml (name, paths, vars, models config)
+│   ├── ProfileConfig.java           # Record: parsed profiles.yml (profile name, target, outputs)
+│   ├── DbtProjectYamlParser.java    # Parses dbt_project.yml + profiles.yml via Jackson YAML
 │   ├── DbtProjectScannerTest.java   # Tests against sample_project/ fixture (5 .sql files)
+│   ├── DbtProjectYamlParserTest.java# 16 tests: project name/paths/vars, profile outputs, threading
 │   └── test/resources/sample_project/
+│       ├── dbt_project.yml          # jaffle_shop project config with model path/var/materialization
+│       ├── profiles.yml             # dev + prod Postgres outputs
 │       └── models/
 │           ├── staging/             # stg_orders, stg_customers, stg_payments (source deps)
 │           └── marts/               # orders (3 staging refs), customer_orders (refs orders)
@@ -82,16 +88,18 @@ dbt-espresso/
 │   └── GraphExecutorTest.java       # 12 tests: ordering, parallelism, failure propagation,
 │                                    #   concurrency limits, selected execution, listener
 │
-├── dbt-testing/                     # Depends on: all modules
+├── dbt-testing/                     # Depends on: all modules, jackson-dataformat-yaml
 │   ├── UnitTestDefinition.java      # Parsed unit_tests: YAML block (given/expect)
 │   ├── UnitTestCompiler.java        # Rewrites model SQL: ref() → mock CTEs, EXCEPT diff
 │   ├── GenericTest.java             # Record for not_null, unique, dbt_expectations.* tests
 │   ├── GenericTestCompiler.java     # Compiles built-in + 8 dbt_expectations tests to SQL
+│   ├── SchemaFile.java              # Record: parsed schema.yml (models, sources, unit_tests)
+│   ├── SchemaFileParser.java        # Jackson YAML → SchemaFile, GenericTest, UnitTestDefinition
 │   ├── MetaTestingValidator.java    # dbt_meta_testing: regex test coverage + doc coverage
 │   ├── AdapterContract.java         # Interface that warehouse adapters must implement
 │   ├── AdapterComplianceSuite.java  # 10-test harness for adapter verification
 │   ├── UnsupportedTestException.java
-│   └── TestingModuleTest.java       # 20 tests across all testing components
+│   └── TestingModuleTest.java       # 49 tests across all testing components
 │
 └── dbt-cli/                         # Depends on: all modules
     └── Main.java                    # Dry-run CLI: scan → DAG → execute
@@ -156,6 +164,7 @@ dbt-jinja  (Jinjava 2.7.2 — static analysis + Jinja rendering)
 - **Generic test compilation:** `GenericTestCompiler` compiles `not_null`, `unique`, `accepted_values`, `relationships` + 8 `dbt_expectations` tests directly to SQL.
 - **Meta-testing:** `MetaTestingValidator` checks test coverage against regex patterns and doc coverage against actual columns.
 - **Adapter compliance:** `AdapterComplianceSuite` runs 10 tests against any `AdapterContract` implementation.
+- **YAML schema parsing:** `DbtProjectYamlParser` parses `dbt_project.yml` → `ProjectConfig` and `profiles.yml` → `ProfileConfig`. `SchemaFileParser` parses `schema.yml` → `SchemaFile` with flattened `GenericTest` and `UnitTestDefinition` lists; handles string/map/dotted-package test syntax, CSV/DICT/SQL row formats, model-level and column-level tests, and source tables.
 
 ## Key Design Decisions
 
@@ -185,7 +194,7 @@ Priority order for making this a usable dbt runner:
 
 1. ~~**Jinja rendering engine**~~ ✅ — `JinjaRenderer` + `RenderContext` in `dbt-jinja`; resolves `ref()`, `source()`, `config()`, `var()`, `is_incremental()`; delegates remaining Jinja2 to Jinjava.
 
-2. **YAML schema parsing** — Parse `schema.yml` / `dbt_project.yml` / `profiles.yml` with Jackson (`jackson-dataformat-yaml`); map to `UnitTestDefinition`, `GenericTest`, and config records.
+2. ~~**YAML schema parsing**~~ ✅ — `DbtProjectYamlParser` (dbt_project.yml → `ProjectConfig`, profiles.yml → `ProfileConfig`); `SchemaFileParser` (schema.yml → `SchemaFile` with `GenericTest` + `UnitTestDefinition`); Jackson `jackson-dataformat-yaml` 2.18.2.
 
 3. **Warehouse adapters** — Implement `AdapterContract` for Snowflake or Postgres (JDBC or ADBC); run `AdapterComplianceSuite` to verify.
 

@@ -1,0 +1,32 @@
+name: jaffle_shop
+version: '1.0.0'
+config-version: 2
+profile: jaffle_shop
+
+model-paths: ["models"]
+seed-paths: ["seeds"]
+test-paths: ["tests"]
+snapshot-paths: ["snapshots"]
+analysis-paths: ["analyses"]
+target-path: target
+clean-targets:
+  - target
+  - dbt_packages
+
+models:
+  jaffle_shop:
+    +materialized: view
+    staging:
+      +materialized: view
+      +schema: staging
+    marts:
+      +materialized: table
+      +schema: analytics
+
+vars:
+  payment_method_vals:
+    - credit_card
+    - coupon
+    - bank_transfer
+    - gift_card
+  start_date: '2018-01-01'
