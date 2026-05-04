@@ -14,5 +14,9 @@
             <groupId>com.dbtespresso</groupId>
             <artifactId>dbt-jinja</artifactId>
         </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.dataformat</groupId>
+            <artifactId>jackson-dataformat-yaml</artifactId>
+        </dependency>
     </dependencies>
 </project>
