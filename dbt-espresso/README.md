@@ -37,6 +37,24 @@ mvn -pl dbt-cli exec:java -Dexec.mainClass="com.dbtespresso.cli.Main" \
 
 ## Architecture
 
+### Module Dependency Graph
+
+```
+dbt-jinja  (Jinjava 2.7.2 — static analysis + Jinja rendering)
+    │
+    ├──→ dbt-parser  (walks filesystem, produces ParsedModel)
+    │        │
+    │        ├──→ dbt-graph  (DAG construction, topo sort, selection)
+    │        │        │
+    │        │        └──→ dbt-engine  (virtual-thread executor)
+    │        │
+    ├──→ dbt-sql  (JSQLParser — SQL validation & table extraction)
+    │
+    └──→ dbt-testing  (unit tests, generic tests, meta-testing, adapter compliance)
+              │
+              └──→ dbt-cli  (entry point)
+```
+
 ### Module Overview
 
 ```
@@ -103,24 +121,6 @@ dbt-espresso/
 │
 └── dbt-cli/                         # Depends on: all modules
     └── Main.java                    # Dry-run CLI: scan → DAG → execute
-```
-
-### Module Dependency Graph
-
-```
-dbt-jinja  (Jinjava 2.7.2 — static analysis + Jinja rendering)
-    │
-    ├──→ dbt-parser  (walks filesystem, produces ParsedModel)
-    │        │
-    │        ├──→ dbt-graph  (DAG construction, topo sort, selection)
-    │        │        │
-    │        │        └──→ dbt-engine  (virtual-thread executor)
-    │        │
-    ├──→ dbt-sql  (JSQLParser — SQL validation & table extraction)
-    │
-    └──→ dbt-testing  (unit tests, generic tests, meta-testing, adapter compliance)
-              │
-              └──→ dbt-cli  (entry point)
 ```
 
 ## The Pipeline
@@ -192,20 +192,14 @@ dbt-jinja  (Jinjava 2.7.2 — static analysis + Jinja rendering)
 
 Priority order for making this a usable dbt runner:
 
-1. ~~**Jinja rendering engine**~~ ✅ — `JinjaRenderer` + `RenderContext` in `dbt-jinja`; resolves `ref()`, `source()`, `config()`, `var()`, `is_incremental()`; delegates remaining Jinja2 to Jinjava.
+1. **Warehouse adapters** — Implement `AdapterContract` for Snowflake or Postgres (JDBC or ADBC); run `AdapterComplianceSuite` to verify.
 
-2. ~~**YAML schema parsing**~~ ✅ — `DbtProjectYamlParser` (dbt_project.yml → `ProjectConfig`, profiles.yml → `ProfileConfig`); `SchemaFileParser` (schema.yml → `SchemaFile` with `GenericTest` + `UnitTestDefinition`); Jackson `jackson-dataformat-yaml` 2.18.2.
+2. **Picocli CLI** — Replace `Main.java` with proper subcommands (`parse`, `build`, `run`, `test`, `ls`, `compile`) and flags (`--select`, `--exclude`, `--threads`, `--target`, `--profiles-dir`).
 
-3. **Warehouse adapters** — Implement `AdapterContract` for Snowflake or Postgres (JDBC or ADBC); run `AdapterComplianceSuite` to verify.
+3. **Incremental model support** — Wire `is_incremental()` to a real run-state check; implement merge/insert-overwrite strategies.
 
-4. **Picocli CLI** — Replace `Main.java` with proper subcommands (`parse`, `build`, `run`, `test`, `ls`, `compile`) and flags (`--select`, `--exclude`, `--threads`, `--target`, `--profiles-dir`).
+4. **LSP server** — LSP4J for VS Code / Cursor integration.
 
-5. **Incremental model support** — Wire `is_incremental()` to a real run-state check; implement merge/insert-overwrite strategies.
+5. **GraalVM native image** — Single-binary distribution (no JVM needed at runtime).
 
-6. **LSP server** — LSP4J for VS Code / Cursor integration.
-
-7. **GraalVM native image** — Single-binary distribution (no JVM needed at runtime).
-
-8. ~~**Taskfile**~~ ✅ — `Taskfile.yml` with `build`, `test`, `verify`, `clean`, `run`, `run-custom`.
-
-9. **Integration tests against real databases** — Implement `AdapterContract` for Postgres, MySQL, and SQLite; spin up each engine in a Docker container (Testcontainers); run `AdapterComplianceSuite` against all three to verify SQL dialect handling, DDL execution, and query results end-to-end.
+6. **Integration tests against real databases** — Implement `AdapterContract` for Postgres, MySQL, and SQLite; spin up each engine in a Docker container (Testcontainers); run `AdapterComplianceSuite` against all three to verify SQL dialect handling, DDL execution, and query results end-to-end.
