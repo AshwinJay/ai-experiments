@@ -8,31 +8,26 @@
         <artifactId>dbt-espresso</artifactId>
         <version>0.1.0-SNAPSHOT</version>
     </parent>
-    <artifactId>dbt-testing</artifactId>
+    <artifactId>dbt-adapters</artifactId>
+
     <dependencies>
         <dependency>
             <groupId>com.dbtespresso</groupId>
-            <artifactId>dbt-jinja</artifactId>
+            <artifactId>dbt-qa</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.dbtespresso</groupId>
-            <artifactId>dbt-parser</artifactId>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.dbtespresso</groupId>
-            <artifactId>dbt-sql</artifactId>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>postgresql</artifactId>
+            <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>com.dbtespresso</groupId>
-            <artifactId>dbt-graph</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.dbtespresso</groupId>
-            <artifactId>dbt-engine</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.fasterxml.jackson.dataformat</groupId>
-            <artifactId>jackson-dataformat-yaml</artifactId>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
         </dependency>
     </dependencies>
 </project>
