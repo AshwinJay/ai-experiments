@@ -47,5 +47,5 @@ jobs:
           distribution: 'temurin'
           cache: 'maven'
 
-      - name: Postgres adapter compliance
-        run: mvn -pl dbt-adapters test -Dgroups=integration --batch-mode
+      - name: All integration tests
+        run: mvn verify -Dgroups=integration --batch-mode
