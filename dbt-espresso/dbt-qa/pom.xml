@@ -8,7 +8,7 @@
         <artifactId>dbt-espresso</artifactId>
         <version>0.1.0-SNAPSHOT</version>
     </parent>
-    <artifactId>dbt-cli</artifactId>
+    <artifactId>dbt-qa</artifactId>
     <dependencies>
         <dependency>
             <groupId>com.dbtespresso</groupId>
@@ -31,8 +31,8 @@
             <artifactId>dbt-engine</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.dbtespresso</groupId>
-            <artifactId>dbt-qa</artifactId>
+            <groupId>com.fasterxml.jackson.dataformat</groupId>
+            <artifactId>jackson-dataformat-yaml</artifactId>
         </dependency>
     </dependencies>
 </project>

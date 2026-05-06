@@ -40,3 +40,8 @@ tasks:
       - mvn -pl dbt-cli exec:java
           -Dexec.mainClass="com.dbtespresso.cli.Main"
           -Dexec.args="{{.CLI_ARGS}}"
+
+  test-postgres:
+    desc: Run Postgres adapter integration tests (requires colima start)
+    cmds:
+      - mvn -pl dbt-adapters test -Dgroups=integration

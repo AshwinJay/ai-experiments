@@ -1,7 +1,7 @@
-package com.dbtespresso.testing;
+package com.dbtespresso.qa;
 
-import com.dbtespresso.testing.SchemaFile.*;
-import com.dbtespresso.testing.UnitTestDefinition.*;
+import com.dbtespresso.qa.SchemaFile.*;
+import com.dbtespresso.qa.UnitTestDefinition.*;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;

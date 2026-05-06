@@ -1,4 +1,4 @@
-package com.dbtespresso.testing;
+package com.dbtespresso.qa;
 
 import com.dbtespresso.parser.ParsedModel;
 

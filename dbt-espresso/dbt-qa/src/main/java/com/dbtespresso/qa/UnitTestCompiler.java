@@ -1,8 +1,8 @@
-package com.dbtespresso.testing;
+package com.dbtespresso.qa;
 
 import com.dbtespresso.jinja.Dependency;
 import com.dbtespresso.jinja.RefExtractor;
-import com.dbtespresso.testing.UnitTestDefinition.MockInput;
+import com.dbtespresso.qa.UnitTestDefinition.MockInput;
 
 import java.util.*;
 import java.util.regex.*;

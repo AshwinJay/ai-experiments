@@ -1,9 +1,9 @@
-package com.dbtespresso.testing;
+package com.dbtespresso.qa;
 
 import com.dbtespresso.parser.ParsedModel;
 import com.dbtespresso.parser.ParsedModel.ResourceType;
-import com.dbtespresso.testing.SchemaFile.*;
-import com.dbtespresso.testing.UnitTestDefinition.*;
+import com.dbtespresso.qa.SchemaFile.*;
+import com.dbtespresso.qa.UnitTestDefinition.*;
 import org.junit.jupiter.api.*;
 
 import java.io.InputStream;

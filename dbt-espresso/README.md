@@ -13,8 +13,8 @@ Inspired by [dbt-fusion](https://github.com/dbt-labs/dbt-fusion) (Rust), reimagi
 ## Quick start
 
 ```bash
-task build        # compile all 7 modules
-task test         # run all ~133 test cases
+task build        # compile all 8 modules
+task test         # run all ~157 unit tests
 task verify       # clean + compile + test
 task run          # dry-run CLI against the bundled sample project
 task run-custom -- path/to/your/dbt/project
@@ -50,9 +50,11 @@ dbt-jinja  (Jinjava 2.7.2 — static analysis + Jinja rendering)
     │        │
     ├──→ dbt-sql  (JSQLParser — SQL validation & table extraction)
     │
-    └──→ dbt-testing  (unit tests, generic tests, meta-testing, adapter compliance)
+    └──→ dbt-qa  (unit tests, generic tests, meta-testing, adapter compliance)
               │
               └──→ dbt-cli  (entry point)
+
+dbt-qa ──→ dbt-adapters  (PostgresAdapter — JDBC + Testcontainers compliance tests)
 ```
 
 ### Module Overview
@@ -106,7 +108,7 @@ dbt-espresso/
 │   └── GraphExecutorTest.java       # 12 tests: ordering, parallelism, failure propagation,
 │                                    #   concurrency limits, selected execution, listener
 │
-├── dbt-testing/                     # Depends on: all modules, jackson-dataformat-yaml
+├── dbt-qa/                          # Depends on: all modules, jackson-dataformat-yaml
 │   ├── UnitTestDefinition.java      # Parsed unit_tests: YAML block (given/expect)
 │   ├── UnitTestCompiler.java        # Rewrites model SQL: ref() → mock CTEs, EXCEPT diff
 │   ├── GenericTest.java             # Record for not_null, unique, dbt_expectations.* tests
@@ -119,8 +121,12 @@ dbt-espresso/
 │   ├── UnsupportedTestException.java
 │   └── TestingModuleTest.java       # 49 tests across all testing components
 │
-└── dbt-cli/                         # Depends on: all modules
-    └── Main.java                    # Dry-run CLI: scan → DAG → execute
+├── dbt-cli/                         # Depends on: all modules
+│   └── Main.java                    # Dry-run CLI: scan → DAG → execute
+│
+└── dbt-adapters/                    # Depends on: dbt-qa, postgresql JDBC, Testcontainers
+    ├── PostgresAdapter.java         # AdapterContract impl: JDBC connection, DDL, schema introspection
+    └── PostgresAdapterComplianceTest.java  # @Tag("integration") — AdapterComplianceSuite via postgres:16-alpine
 ```
 
 ## The Pipeline
@@ -164,6 +170,7 @@ dbt-espresso/
 - **Generic test compilation:** `GenericTestCompiler` compiles `not_null`, `unique`, `accepted_values`, `relationships` + 8 `dbt_expectations` tests directly to SQL.
 - **Meta-testing:** `MetaTestingValidator` checks test coverage against regex patterns and doc coverage against actual columns.
 - **Adapter compliance:** `AdapterComplianceSuite` runs 10 tests against any `AdapterContract` implementation.
+- **Postgres adapter:** `PostgresAdapter` implements `AdapterContract` via JDBC; passes all 10 compliance tests against a live `postgres:16-alpine` container (Testcontainers, `@Tag("integration")`).
 - **YAML schema parsing:** `DbtProjectYamlParser` parses `dbt_project.yml` → `ProjectConfig` and `profiles.yml` → `ProfileConfig`. `SchemaFileParser` parses `schema.yml` → `SchemaFile` with flattened `GenericTest` and `UnitTestDefinition` lists; handles string/map/dotted-package test syntax, CSV/DICT/SQL row formats, model-level and column-level tests, and source tables.
 
 ## Key Design Decisions
@@ -192,9 +199,7 @@ dbt-espresso/
 
 Priority order for making this a usable dbt runner:
 
-1. **Warehouse adapters** — Implement `AdapterContract` for Snowflake or Postgres (JDBC or ADBC); run `AdapterComplianceSuite` to verify.
-
-2. **Picocli CLI** — Replace `Main.java` with proper subcommands (`parse`, `build`, `run`, `test`, `ls`, `compile`) and flags (`--select`, `--exclude`, `--threads`, `--target`, `--profiles-dir`).
+1. **Picocli CLI** — Replace `Main.java` with proper subcommands (`parse`, `build`, `run`, `test`, `ls`, `compile`) and flags (`--select`, `--exclude`, `--threads`, `--target`, `--profiles-dir`).
 
 3. **Incremental model support** — Wire `is_incremental()` to a real run-state check; implement merge/insert-overwrite strategies.
 

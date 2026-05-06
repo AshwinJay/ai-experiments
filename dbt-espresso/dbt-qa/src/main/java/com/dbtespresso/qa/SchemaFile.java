@@ -1,4 +1,4 @@
-package com.dbtespresso.testing;
+package com.dbtespresso.qa;
 
 import java.util.*;
 
