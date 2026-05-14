@@ -14,6 +14,7 @@
 - **Meta-testing:** `MetaTestingValidator` checks test coverage against regex patterns and doc coverage against actual columns.
 - **Adapter compliance:** `AdapterComplianceSuite` runs 10 tests against any `AdapterContract` implementation.
 - **Postgres adapter:** `PostgresAdapter` implements `AdapterContract` via JDBC; passes all 10 compliance tests against a live `postgres:16-alpine` container (Testcontainers, `@Tag("integration")`).
+- **End-to-end pipeline execution:** `AdapterModelRunner` wires `GraphExecutor` → `JinjaRenderer` → `AdapterContract`; `PipelineIntegrationTest` runs a 3-model jaffle-shop fixture (with `{{ ref() }}` joins) against a live Postgres container, verifying tables/views are created in topological order with correct data.
 - **YAML schema parsing:** `DbtProjectYamlParser` parses `dbt_project.yml` → `ProjectConfig` and `profiles.yml` → `ProfileConfig`. `SchemaFileParser` parses `schema.yml` → `SchemaFile` with flattened `GenericTest` and `UnitTestDefinition` lists; handles string/map/dotted-package test syntax, CSV/DICT/SQL row formats, model-level and column-level tests, and source tables.
 
 ## What Tests Exist (including Ecosystem Compatibility)
@@ -37,4 +38,4 @@ Priority order for making this a usable dbt runner:
 
 5. **GraalVM native image** — Single-binary distribution (no JVM needed at runtime).
 
-6. **Integration tests against real databases** — Implement `AdapterContract` for Postgres, MySQL, and SQLite; spin up each engine in a Docker container (Testcontainers); run `AdapterComplianceSuite` against all three to verify SQL dialect handling, DDL execution, and query results end-to-end.
+6. **More database adapters** — Implement `AdapterContract` for MySQL and SQLite; run `AdapterComplianceSuite` and `PipelineIntegrationTest` against each to verify SQL dialect handling end-to-end.
