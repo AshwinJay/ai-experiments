@@ -16,6 +16,14 @@
             <artifactId>dbt-qa</artifactId>
         </dependency>
         <dependency>
+            <groupId>com.dbtespresso</groupId>
+            <artifactId>dbt-engine</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.dbtespresso</groupId>
+            <artifactId>dbt-jinja</artifactId>
+        </dependency>
+        <dependency>
             <groupId>org.postgresql</groupId>
             <artifactId>postgresql</artifactId>
         </dependency>
