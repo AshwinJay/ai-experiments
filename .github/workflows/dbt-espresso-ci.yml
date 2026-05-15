@@ -48,4 +48,4 @@ jobs:
           cache: 'maven'
 
       - name: All integration tests
-        run: mvn verify -Dgroups=integration -Dsurefire.useFile=false --batch-mode
+        run: mvn verify -Dgroups=integration -DexcludedGroups= -Dsurefire.useFile=false --batch-mode

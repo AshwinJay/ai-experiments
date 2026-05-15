@@ -13,7 +13,7 @@ import java.util.Set;
 import java.util.function.Supplier;
 
 /**
- * Connects {@link GraphExecutor} to a warehouse {@link AdapterContract}.
+ * Connects {@link com.dbtespresso.engine.GraphExecutor} to a warehouse {@link AdapterContract}.
  *
  * Each call to {@link #run} opens its own connection via the factory so that
  * concurrent virtual threads in {@code GraphExecutor} never share a
