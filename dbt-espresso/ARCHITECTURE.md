@@ -17,7 +17,8 @@ dbt-jinja  (Jinjava 2.7.2 — static analysis + Jinja rendering)
               │
               └──→ dbt-cli  (entry point)
 
-dbt-qa ──→ dbt-adapters  (PostgresAdapter — JDBC + Testcontainers compliance tests)
+dbt-qa ──→ dbt-adapters  (PostgresAdapter + AdapterModelRunner — JDBC, Testcontainers compliance + end-to-end tests)
+dbt-engine ──→ dbt-adapters
 ```
 
 ## Module Details
@@ -87,9 +88,11 @@ dbt-espresso/
 ├── dbt-cli/                         # Depends on: all modules
 │   └── Main.java                    # Dry-run CLI: scan → DAG → execute
 │
-└── dbt-adapters/                    # Depends on: dbt-qa, postgresql JDBC, Testcontainers
+└── dbt-adapters/                    # Depends on: dbt-qa, dbt-engine, dbt-jinja, postgresql JDBC, Testcontainers
     ├── PostgresAdapter.java         # AdapterContract impl: JDBC connection, DDL, schema introspection
-    └── PostgresAdapterComplianceTest.java  # @Tag("integration") — AdapterComplianceSuite via postgres:16-alpine
+    ├── AdapterModelRunner.java      # ModelRunner impl: renders Jinja, materializes via AdapterContract (one connection per model)
+    ├── PostgresAdapterComplianceTest.java  # @Tag("integration") @TestFactory — 10 compliance checks as individual JUnit tests
+    └── PostgresEndToEndTest.java    # @Tag("integration") — full pipeline scan→DAG→execute→verify against postgres:16-alpine
 ```
 
 ## The Pipeline
