@@ -32,7 +32,7 @@ dbt-espresso/
 │   ├── RefExtractor.java            # Static Jinja analysis — extracts ref()/source() via regex
 │   ├── RenderContext.java           # Record: ref/source resolution maps, vars, isIncremental
 │   ├── JinjaRenderer.java           # Renders raw Jinja+SQL → plain SQL (pre-process + Jinjava)
-│   ├── RefExtractorTest.java        # 15 tests: quotes, dedup, comments, filters, incremental
+│   ├── RefExtractorTest.java        # 18 tests: quotes, dedup, comments, filters, incremental
 │   └── JinjaRendererTest.java       # 15 tests: ref/source/config/var/is_incremental/full models
 │
 ├── dbt-parser/                      # Depends on: dbt-jinja, jackson-dataformat-yaml
@@ -61,7 +61,7 @@ dbt-espresso/
 │   │                                #   ancestors/descendants, select(+model / model+)
 │   ├── CycleDetectedException.java
 │   ├── DanglingRefException.java
-│   └── ModelGraphTest.java          # 20 tests: jaffle shop, diamond, cycles, selection, wide
+│   └── ModelGraphTest.java          # 22 tests: jaffle shop, diamond, cycles, selection, wide
 │
 ├── dbt-engine/                      # Depends on: dbt-jinja, dbt-parser, dbt-graph
 │   ├── GraphExecutor.java           # Virtual-thread executor, level-by-level, semaphore control
@@ -69,7 +69,7 @@ dbt-espresso/
 │   ├── ModelResult.java             # Record: SUCCESS/ERROR/SKIPPED + timing + rows
 │   ├── ExecutionSummary.java        # Aggregated run stats
 │   ├── ExecutionListener.java       # Observer for progress/logging
-│   └── GraphExecutorTest.java       # 12 tests: ordering, parallelism, failure propagation,
+│   └── GraphExecutorTest.java       # 13 tests: ordering, parallelism, failure propagation,
 │                                    #   concurrency limits, selected execution, listener
 │
 ├── dbt-qa/                          # Depends on: all modules, jackson-dataformat-yaml
