@@ -1,0 +1,12 @@
+version: '3'
+
+tasks:
+  test:
+    desc: Run ESLint (code quality check)
+    cmds:
+      - bun run lint
+
+  dev:
+    desc: Start the dev server
+    cmds:
+      - bun run dev
