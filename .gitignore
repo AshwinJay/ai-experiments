@@ -19,13 +19,31 @@ buildNumber.properties
 .classpath
 .project
 .settings/
-*.swp
-*.swo
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
 .vscode/
 
 # OS
 .DS_Store
 Thumbs.db
+
+# Node / Vite
+logs
+node_modules
+dist
+dist-ssr
+*.local
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Data
+data/
 
 # Logs
 *.log
