@@ -32,3 +32,59 @@
 - [x] **Notes tab** — Dedicated Notes tab next to Release Checklist for capturing freeform notes. Each note supports: tags, rich links, text content, a mark-as-done toggle, drag-to-reorder, and up to 3 levels of subnesting (child/grandchild items).
 
 - [x] **Multi-user sync via shared folder (File System Access API)** — Allow multiple users to collaborate via a shared cloud folder (Google Drive, OneDrive, Dropbox, etc.) mounted locally. Each user writes their own per-user JSON file (`release-YYYY-WNN-<username>.json`). On load, the app reads all matching files in the folder and merges them into a unified view. Merge strategy: last-write-wins per item by `updatedAt` timestamp for services and notes; OR-merge for checklist; last-write-wins by `savedAt` for scalar fields. Deletions use a `deletedAt` tombstone.
+
+## Momentum Tab (not yet started)
+
+A unified "Release Momentum" tab that consolidates release health into a single holistic view. Replaces the need for separate Risks, Buffer, and Slippage tabs. Grounded in the Momentum Framework (`momentum-framework.md`).
+
+**Formula:** `Momentum = (Power ÷ 100) × (Capacity ÷ 100) × (1 − Risk Drag) × 100`
+**Status thresholds:** ≥ 70 ON TRACK · 40–69 AT RISK · < 40 STALLED
+
+### ⚠️ Open question: clarify Capacity vs Buffer before building
+
+These two terms are currently conflated in common usage and need a decision before any UI is built:
+
+- **Capacity (framework definition):** Team availability — what fraction of the release team is actually able to work this week. Reduced by PTO, oncall rotation, unplanned interruptions. A people/bandwidth measure. Feeds directly into the Momentum formula.
+- **Buffer (release-specific):** Schedule slack — days remaining before the hard deployment deadline minus the time realistically needed. A time measure. Currently proposed to surface as a risk (tight buffer = auto-generated HIGH risk) rather than as a capacity input.
+
+**Why it matters:** If buffer is folded into capacity (e.g. "we have plenty of time so capacity feels high"), the formula loses precision — you could have a fully available team with zero schedule slack, or a half-staffed team with two weeks of runway. They need to stay separate.
+
+**Decision needed:** Confirm whether this separation (capacity = people, buffer = time-as-risk) makes sense for how the release team actually talks about these concepts, or redefine before implementation.
+
+### Inputs (manual)
+
+- [ ] **Power dials** — Strength (1–10) and Speed (1–10) sliders; display derived `Power = Strength × Speed` (range 1–100).
+- [ ] **Capacity** — Team availability this week as a % (0–100). Distinct from time buffer; reflects how much of the release team is actually engaged vs. on PTO/oncall/pulled away. Separate from slippage and schedule buffer.
+- [ ] **Schedule buffer** — Days of slack remaining before the hard deployment deadline (manual number input). Feeds into risk drag as an auto-generated risk if buffer ≤ N days, rather than being conflated with capacity.
+
+### Risk Register
+
+- [ ] **Auto-detected risks** (read from existing service data, non-editable):
+  - Failed services → HIGH risk (Chance 90%, Impact 8)
+  - Services with active hotfixes → MED risk (Chance 60%, Impact 5)
+  - Unresolved upstream dependencies → risk per blocked service
+  - De-scoped / slipped services → risk (Chance 50%, Impact 4)
+  - Tight schedule buffer (≤ 1 day) → HIGH risk
+- [ ] **Manual risks** — Release manager can add arbitrary risks with Chance (0–100%) and Impact (1–10). Shows per-risk score and level (LOW / MED / HIGH).
+- [ ] **Slippage flag per service** — Add a "de-scope from release" toggle on each service card. De-scoped services appear in the auto-detected risk list.
+- [ ] **Total Risk Drag** — Computed as `min(0.85, Σ(risk scores) ÷ (count × 6))`; displayed alongside the register.
+
+### Derived outputs
+
+- [ ] **Net Momentum** — Big prominent number (0–100) with ON TRACK / AT RISK / STALLED badge.
+- [ ] **Release Goal score** — Progress = % of in-scope services deployed; priority = P2 default (user-overridable to P1 or P3). Full formulas:
+  - Risk score per risk: `(Chance ÷ 100) × Impact` → LOW < 2.5, MED 2.5–4.99, HIGH ≥ 5.0
+  - Priority tiers: P1 weight 1.0× threshold 25 · P2 weight 1.5× threshold 40 · P3 weight 2.0× threshold 60
+  - `Feasibility Multiplier = min(1.0, Momentum ÷ Threshold)`
+  - `Goal Score = (Progress% × Priority Weight × Feasibility Multiplier) ÷ 2 × 100`
+- [ ] **Portfolio Health** — If multiple goals tracked: `Σ(Goal Score × Priority) ÷ Σ(100 × Priority) × 100`
+
+### Persistence
+
+- [ ] Store momentum inputs (strength, speed, capacity, buffer, manual risks, goal priority, slippage flags) in the weekly JSON file alongside existing release data.
+
+### Design notes
+
+- Capacity ≠ buffer: capacity is team bandwidth (people), buffer is schedule slack (time). Keep them as separate inputs. Buffer surfaces as a risk; capacity directly feeds the momentum formula.
+- Auto-detected risks are re-derived on load from live service data — they are not stored separately.
+- The tab replaces the need for standalone Risks, Buffer, and Slippage sections elsewhere in the app.
